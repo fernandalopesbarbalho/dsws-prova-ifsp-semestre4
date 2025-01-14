@@ -1,0 +1,2 @@
+# Desenvolvimento Web: Servidor - Prova de API's com Flask
+Prova realizada durante o quarto semestre de Análise e Desenvolvimento de Sistemas (IFSP), referente à matéria de Desenvolvimento Web: Servidor.
