@@ -1,5 +1,5 @@
 import os
-from flask import Flask, render_template, session, redirect, url_for
+from flask import Flask, render_template, session, redirect, url_for, flash
 from flask_bootstrap import Bootstrap
 from flask_moment import Moment
 from flask_wtf import FlaskForm
@@ -7,6 +7,7 @@ from wtforms import StringField, SubmitField, SelectField
 from wtforms.validators import DataRequired
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
+from datetime import datetime
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 
@@ -43,11 +44,16 @@ class User(db.Model):
 
 
 class NameForm(FlaskForm):
-    name = StringField('What is your name?', validators=[DataRequired()])
-    role = SelectField('Role?', choices=[('Administrator', 'Administrator'),
-                                         ('Moderator', 'Moderator'),
-                                         ('User', 'User')])
-    submit = SubmitField('Submit')
+    name = StringField('Cadastre o novo Aluno:', validators=[DataRequired()])
+    role = SelectField('Disciplina associada:', choices=[
+        ('DSWA5', 'DSWA5'),
+        ('GPSA5', 'GPSA5'),
+        ('IHCA5', 'IHCA5'),
+        ('SODA5', 'SODA5'),
+        ('PJIA5', 'PJIA5'),
+        ('TCOA5', 'TCOA5'),
+    ])
+    submit = SubmitField('Cadastrar')
 
 @app.shell_context_processor
 def make_shell_context():
@@ -56,7 +62,7 @@ def make_shell_context():
 
 @app.errorhandler(404)
 def page_not_found(e):
-    return render_template('404.html'), 404
+    return render_template('404.html', current_time=datetime.utcnow()), 404
 
 
 @app.errorhandler(500)
@@ -66,31 +72,28 @@ def internal_server_error(e):
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
+    return render_template('index.html', current_time=datetime.utcnow())
+
+@app.route('/alunos', methods=['GET', 'POST'])
+def alunos():
     form = NameForm()
     if form.validate_on_submit():
-        role = Role.query.filter_by(name=form.role.data).first()
-        if not role:
-            role = Role(name=form.role.data)
-            db.session.add(role)
-            db.session.commit()
-
         user = User.query.filter_by(username=form.name.data).first()
-        if not user:
+        if user:
+            flash('Estudante já existe na base de dados!')
+        else:
+            role = Role.query.filter_by(name=form.role.data).first()
+            if not role:
+                role = Role(name=form.role.data)
+                db.session.add(role)
+
             user = User(username=form.name.data, role=role)
             db.session.add(user)
             db.session.commit()
-            session['known'] = False
-        else:
-            session['known'] = True
-        session['name'] = form.name.data
-        session['role'] = form.role.data
-        return redirect(url_for('index'))
+
+            flash('Estudante cadastrado com sucesso!')
+        return redirect(url_for('alunos'))
+
 
     users = User.query.all()
-    roles = Role.query.all()
-    return render_template('index.html',
-                           form=form,
-                           name=session.get('name'),
-                           known=session.get('known', False),
-                           users=users,
-                           roles=roles)
+    return render_template('alunos.html', form=form, users=users)
